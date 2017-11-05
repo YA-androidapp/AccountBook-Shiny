@@ -9,10 +9,20 @@
 #    http://shiny.rstudio.com/
 #
 
-require('DT')
+reqPackage <- function(x)
+{
+  if (!require(x,character.only = TRUE))
+  {
+    install.packages(x,dep=TRUE)
+    if(!require(x,character.only = TRUE)) stop("Package not found")
+  }
+}
+reqPackage('DT')
+reqPackage('lubridate')
+reqPackage('shiny')
+reqPackage('xts')
 
-library(shiny)
-library(DT)
+##############################
 
 # 日付文字列の書式
 format.6 <- "%Y%m%d"
@@ -59,7 +69,7 @@ colsort <- function(data, order){
 }
 
 # 行の編集
-rowfilter <- function(data, format, since){
+rowfilter <- function(data, format, dateRange){
   Sys.setlocale("LC_TIME","C")
   data.char <- as.character(data[ , 1])
   
@@ -73,8 +83,9 @@ rowfilter <- function(data, format, since){
     data.char,
     format=fmt
   )
-  cat(as.character(since))
-  cond <- data$取引日 >= since
+  
+  # cat(as.Date(data$取引日),"\t",dateRange[1],"\t",dateRange[2],"\n")
+  cond <- ((as.Date(data$取引日) >= dateRange[1]) && (as.Date(data$取引日)<= dateRange[2]))
   data <- data[cond, ]
   return( data )
 }
@@ -101,7 +112,7 @@ ui <- fluidPage(# App title ----
                     
                     dateRangeInput('dateRange',
                                    label = 'Date range input: yyyy-mm-dd',
-                                   start = Sys.Date() - 365, end = Sys.Date() + 2
+                                   start = Sys.Date() + years(-10) , end = Sys.Date()
                     ),
                     
                     # Horizontal line ----
@@ -122,6 +133,7 @@ ui <- fluidPage(# App title ----
                   mainPanel(# Output: Data file ----
                             #tableOutput("contents")
                             DT::dataTableOutput("table"))
+                  
                   
                 ))
 
@@ -147,7 +159,7 @@ server <- function(input, output) {
       fileEncoding = "utf8"
     )
     df.sorted <- colsort(df, order.1)
-    df.filtered <- rowfilter(df.sorted, format.1, input$dateRange[1])
+    df.filtered <- rowfilter(df.sorted, format.1, input$dateRange)
     
     # df <- df.sorted
     df <- df.filtered
