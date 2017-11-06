@@ -1,4 +1,5 @@
 # Copyright (c) 2017 YA-androidapp(https://github.com/YA-androidapp) All rights reserved.
+# https://ya-androidapp.shinyapps.io/AccountBook-Shiny/
 
 #
 # This is a Shiny web application. You can run the application by clicking
