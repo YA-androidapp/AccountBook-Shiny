@@ -1,3 +1,6 @@
+#Shiny
+rsconnect/
+
 # History files
 .Rhistory
 .Rapp.history
