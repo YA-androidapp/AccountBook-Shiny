@@ -19,7 +19,9 @@ reqPackage <- function(x)
   }
 }
 reqPackage('colorspace')
+reqPackage('dplyr')
 reqPackage('DT')
+reqPackage('ggplot2')
 reqPackage('lubridate')
 reqPackage('plyr')
 reqPackage('reshape2')
@@ -95,7 +97,7 @@ rowfilter <- function(data.rowfilter, dateRange) {
   cond <-
     ((as.Date(data.rowfilter$取引日) >= dateRange[1]) &&
        (as.Date(data.rowfilter$取引日) <= dateRange[2]))
-  data.rowfilter <- data.rowfilter[cond,]
+  data.rowfilter <- data.rowfilter[cond, ]
   return(data.rowfilter)
 }
 
@@ -109,13 +111,15 @@ groupByMonthAndDetail1 <- function(data.g, flag) {
   data.h <- data.g[, c(1, 2, 4)]
   colnames(data.h) <- colsnames.g
 
-  data.h.wide <- dcast(data.h,   取引年月   ~   詳細, sum, value.var = "入出金額")
+  data.h.wide <-
+    dcast(data.h,    取引年月    ~    詳細, sum, value.var = "入出金額")
   # return(data.g.wide)
 
   data.h.wide.mean <- apply(data.h.wide[, -1], 2, mean)
 
   if (flag) {
-    data.h.wide.order <- 1 + c(0, order(data.h.wide.mean, decreasing = T))
+    data.h.wide.order <-
+      1 + c(0, order(data.h.wide.mean, decreasing = T))
     return(data.h.wide[, data.h.wide.order])
   } else {
     return(data.h.wide.mean)
@@ -207,7 +211,17 @@ ui <- fluidPage(# App title ----
 
                     DT::dataTableOutput("table_g"),
 
-                    plotOutput(outputId = "plot_g", width = "400px", height = "400px")
+                    plotOutput(
+                      outputId = "plot_d",
+                      width = "400px",
+                      height = "400px"
+                    ),
+
+                    plotOutput(
+                      outputId = "plot_g",
+                      width = "400px",
+                      height = "400px"
+                    )
                   )
                 ))
 
@@ -233,7 +247,7 @@ server <- function(input, output) {
       } else if (input$disp == "group") {
         data <- groupByMonthAndDetail1(df.filtered, TRUE)
       } else {
-        data <- (df.filtered)
+        data <- df.filtered
       }
     }
   },
@@ -262,8 +276,54 @@ server <- function(input, output) {
   },
   options = list(paging = FALSE)))
 
-  output$plot_g <- renderPlot({
+  output$plot_d <- renderPlot({
+    req(input$file1)
+    df.sorted <- readAndSort(input$file1$datapath, input$order)
 
+    if ((mode(df.sorted[, 2]) == "numeric") &&
+        (mode(df.sorted[, 3]) == "numeric") &&
+        (mode(df.sorted[, 6]) == "numeric")) {
+      df.filtered <- rowfilter(df.sorted, input$dateRange)
+      df.filtered.2 <- df.filtered[,c(1,6)]
+      df.filtered.2[,2] <- as.numeric(df.filtered.2[,2])
+
+      df.filtered.2 <- df.filtered.2 %>% group_by(df.filtered.2$取引日) %>%
+        arrange(df.filtered.2$現在高) %>%
+        filter(row_number()==1)
+
+      print(df.filtered.2)
+
+      df.xts <- xts(df.filtered.2, as.POSIXct(df.filtered.2$取引日))
+
+      windowsFonts(gothic = windowsFont("MS Gothic"))
+      par(family = "gothic")
+
+      g <- ggplot(
+        df.xts,
+        aes(
+          x = 取引日,
+          y = 現在高,
+          group = 1
+        )
+      )
+      g <- g + geom_line(
+        colour = "red",
+        linetype = 1,
+        size = 0.5)
+      g <- g + geom_smooth (
+        method = "lm"
+      )
+      g <- g + xlab("取引日")
+      g <- g + ylab("現在高")
+      g <- g + ggtitle("取引日 - 現在高")
+      plot(g)
+
+    }
+
+
+  })
+
+  output$plot_g <- renderPlot({
     req(input$file1)
     df.sorted <- readAndSort(input$file1$datapath, input$order)
 
@@ -275,13 +335,14 @@ server <- function(input, output) {
       if (input$disp == "group") {
         data <- cbind(t(groupByMonthAndDetail1(df.filtered, FALSE)))
         data <- data.frame(t(data[, order(data, decreasing = T)]))
-        windowsFonts(gothic=windowsFont("MS Gothic"))
-        par(family="gothic")
-        barplot(t(data)[,1], col=rainbow_hcl(ncol(data)), names.arg = names(t(data)))
+        windowsFonts(gothic = windowsFont("MS Gothic"))
+        par(family = "gothic")
+        barplot(t(data)[, 1],
+                col = rainbow_hcl(ncol(data)),
+                names.arg = names(t(data)))
       }
     }
   })
-
 }
 
 # Run the application
