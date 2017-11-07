@@ -1,5 +1,4 @@
 # Copyright (c) 2017 YA-androidapp(https://github.com/YA-androidapp) All rights reserved.
-# https://ya-androidapp.shinyapps.io/AccountBook-Shiny/
 
 #
 # This is a Shiny web application. You can run the application by clicking
@@ -19,6 +18,7 @@ reqPackage <- function(x)
       stop("Package not found")
   }
 }
+reqPackage('colorspace')
 reqPackage('DT')
 reqPackage('lubridate')
 reqPackage('plyr')
@@ -35,34 +35,40 @@ colsnames.g <- c("取引年月", "入出金額", "詳細")
 ##############################
 
 # 列の編集
-colsort <- function(data, order) {
-  data <- data[, order]
+colsort <- function(data.colsort, order) {
+  data.colsort <- data.colsort[, order]
 
-  data[, 1] <- ifelse(is.na(data[, 1]), "", data[, 1])
-  data[, 2] <- ifelse(is.na(data[, 2]), 0,  data[, 2])
-  data[, 3] <- ifelse(is.na(data[, 3]), 0,  data[, 3])
-  data[, 4] <- ifelse(is.na(data[, 4]), "", data[, 4])
-  data[, 5] <- ifelse(is.na(data[, 5]), "", data[, 5])
-  data[, 6] <- ifelse(is.na(data[, 6]), 0,  data[, 6])
+  data.colsort[, 1] <-
+    ifelse(is.na(data.colsort[, 1]), "", data.colsort[, 1])
+  data.colsort[, 2] <-
+    ifelse(is.na(data.colsort[, 2]), 0,  data.colsort[, 2])
+  data.colsort[, 3] <-
+    ifelse(is.na(data.colsort[, 3]), 0,  data.colsort[, 3])
+  data.colsort[, 4] <-
+    ifelse(is.na(data.colsort[, 4]), "", data.colsort[, 4])
+  data.colsort[, 5] <-
+    ifelse(is.na(data.colsort[, 5]), "", data.colsort[, 5])
+  data.colsort[, 6] <-
+    ifelse(is.na(data.colsort[, 6]), 0,  data.colsort[, 6])
 
-  data[, 2] <- gsub(",", "",  data[, 2])
-  data[, 3] <- gsub(",", "",  data[, 3])
-  data[, 6] <- gsub(",", "",  data[, 6])
+  data.colsort[, 2] <- gsub(",", "",  data.colsort[, 2])
+  data.colsort[, 3] <- gsub(",", "",  data.colsort[, 3])
+  data.colsort[, 6] <- gsub(",", "",  data.colsort[, 6])
 
-  data[, 2] <- gsub("円", "", data[, 2])
-  data[, 3] <- gsub("円", "", data[, 3])
-  data[, 6] <- gsub("円", "", data[, 6])
+  data.colsort[, 2] <- gsub("円", "", data.colsort[, 2])
+  data.colsort[, 3] <- gsub("円", "", data.colsort[, 3])
+  data.colsort[, 6] <- gsub("円", "", data.colsort[, 6])
 
-  data[, 2] <- gsub(" ", "",  data[, 2])
-  data[, 3] <- gsub(" ", "",  data[, 3])
-  data[, 6] <- gsub(" ", "",  data[, 6])
+  data.colsort[, 2] <- gsub(" ", "",  data.colsort[, 2])
+  data.colsort[, 3] <- gsub(" ", "",  data.colsort[, 3])
+  data.colsort[, 6] <- gsub(" ", "",  data.colsort[, 6])
 
-  data[, 2] <- as.numeric(data[, 2])
-  data[, 3] <- as.numeric(data[, 3])
-  data[, 6] <- as.numeric(data[, 6])
+  data.colsort[, 2] <- as.numeric(data.colsort[, 2])
+  data.colsort[, 3] <- as.numeric(data.colsort[, 3])
+  data.colsort[, 6] <- as.numeric(data.colsort[, 6])
 
-  colnames(data) <- colsnames
-  return(data)
+  colnames(data.colsort) <- colsnames
+  return(data.colsort)
 }
 
 # 日付文字列の書式
@@ -80,35 +86,59 @@ checkDateFormat <- function(dateStr) {
 }
 
 # 行の編集
-rowfilter <- function(data, dateRange) {
+rowfilter <- function(data.rowfilter, dateRange) {
   Sys.setlocale("LC_TIME", "C")
-  data.char <- as.character(data[, 1])
-  data[, 1] <- as.Date(data.char,
-                       format = checkDateFormat(data.char))
+  data.rowfilter.char <- as.character(data.rowfilter[, 1])
+  data.rowfilter[, 1] <-
+    as.Date(data.rowfilter.char, format = checkDateFormat(data.rowfilter.char))
 
-  # cat(as.Date(data$取引日),"\t",dateRange[1],"\t",dateRange[2],"\n")
   cond <-
-    ((as.Date(data$取引日) >= dateRange[1]) &&
-       (as.Date(data$取引日) <= dateRange[2]))
-  data <- data[cond,]
-  return(data)
+    ((as.Date(data.rowfilter$取引日) >= dateRange[1]) &&
+       (as.Date(data.rowfilter$取引日) <= dateRange[2]))
+  data.rowfilter <- data.rowfilter[cond,]
+  return(data.rowfilter)
 }
 
 #月別詳細1別に集計
-groupByMonthAndDetail1 <- function(df) {
-  df[,1] <- substr(df[,1],1,7)
-  df[,2] <- ifelse(df[,2]>0,df[,2],-1*df[,3])
-  df[,4] <- df[,4]
+groupByMonthAndDetail1 <- function(data.g, flag) {
+  data.g[, 1] <- substr(data.g[, 1], 1, 7)
+  data.g[, 2] <-
+    ifelse(data.g[, 2] > 0, data.g[, 2], -1 * data.g[, 3])
+  data.g[, 4] <- data.g[, 4]
 
-  df <- df[,c(1,2,4)]
-  colnames(df) <- colsnames.g
+  data.h <- data.g[, c(1, 2, 4)]
+  colnames(data.h) <- colsnames.g
 
-  df.wide <- dcast(df, 取引年月 ~ 詳細, sum, value.var = "入出金額")
-  # return(df.wide)
+  data.h.wide <- dcast(data.h,   取引年月   ~   詳細, sum, value.var = "入出金額")
+  # return(data.g.wide)
 
-  df.wide.mean <- apply(df.wide[, -1], 2, mean)
-  df.wide.order <- 1+c(0, order(df.wide.mean, decreasing=T))
-  return(df.wide[,df.wide.order])
+  data.h.wide.mean <- apply(data.h.wide[, -1], 2, mean)
+
+  if (flag) {
+    data.h.wide.order <- 1 + c(0, order(data.h.wide.mean, decreasing = T))
+    return(data.h.wide[, data.h.wide.order])
+  } else {
+    return(data.h.wide.mean)
+  }
+}
+
+readAndSort <- function(fpath, forder) {
+  if (endsWith(fpath, '.csv')) {
+    df.csv <- read.csv(
+      fpath,
+      #
+      header = T,
+      na.strings = "",
+      skip = 6,
+      stringsAsFactors = F,
+      # fileEncoding = "cp932"
+      fileEncoding = "utf8"
+    )
+    return(colsort(df.csv, as.integer(unlist(
+      strsplit(forder,
+               ",")
+    ))))
+  }
 }
 
 ##############################
@@ -146,10 +176,12 @@ ui <- fluidPage(# App title ----
                     radioButtons(
                       "disp",
                       "Display",
-                      choices = c(All = "all",
-                                  Group = "group",
-                                  Head = "head",
-                                  Tail = "tail"),
+                      choices = c(
+                        All = "all",
+                        Group = "group",
+                        Head = "head",
+                        Tail = "tail"
+                      ),
                       selected = "all"
                     ),
 
@@ -168,61 +200,87 @@ ui <- fluidPage(# App title ----
                   ),
 
                   # Main panel for displaying outputs ----
-                  mainPanel(# Output: Data file ----
-                            #tableOutput("contents")
-                            DT::dataTableOutput("table"))
+                  mainPanel(
+                    # Output: Data file ----
+                    #tableOutput("contents")
+                    DT::dataTableOutput("table_d"),
 
+                    DT::dataTableOutput("table_g"),
 
+                    plotOutput(outputId = "plot_g", width = "400px", height = "400px")
+                  )
                 ))
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  # output$contents <- renderTable({
-  output$table <- DT::renderDataTable(DT::datatable({
+  output$table_d <- DT::renderDataTable(DT::datatable({
     # input$file1 will be NULL initially. After the user selects
     # and uploads a file, head of that data file by default,
     # or all rows if selected, will be shown.
 
     req(input$file1)
+    df.sorted <- readAndSort(input$file1$datapath, input$order)
 
-    # if(datapath.endsWith('.csv'))
-
-    df <- read.csv(
-      input$file1$datapath,
-      header = T,
-      na.strings = "",
-      skip = 6,
-      stringsAsFactors = F,
-      # fileEncoding = "cp932"
-      fileEncoding = "utf8"
-    )
-    df.sorted <-
-      colsort(df, as.integer(unlist(strsplit(
-        input$order, ","
-      ))))
-
-    if ((mode(df.sorted[,2])=="numeric") &&
-        (mode(df.sorted[,3])=="numeric") &&
-        (mode(df.sorted[,6])=="numeric")) {
+    if ((mode(df.sorted[, 2]) == "numeric") &&
+        (mode(df.sorted[, 3]) == "numeric") &&
+        (mode(df.sorted[, 6]) == "numeric")) {
       df.filtered <- rowfilter(df.sorted, input$dateRange)
 
-      # df <- df.sorted
-      df <- df.filtered
-
-      # endif
-
       if (input$disp == "head") {
-        data <- (head(df))
+        data <- (head(df.filtered))
       } else if (input$disp == "tail") {
-        data <- (tail(df))
+        data <- (tail(df.filtered))
       } else if (input$disp == "group") {
-        data <- groupByMonthAndDetail1(df)
+        data <- groupByMonthAndDetail1(df.filtered, TRUE)
       } else {
-        data <- (df)
+        data <- (df.filtered)
       }
     }
   },
   options = list(paging = FALSE)))
+
+  output$table_g <- DT::renderDataTable(DT::datatable({
+    # input$file1 will be NULL initially. After the user selects
+    # and uploads a file, head of that data file by default,
+    # or all rows if selected, will be shown.
+
+    req(input$file1)
+    df.sorted <- readAndSort(input$file1$datapath, input$order)
+
+    if ((mode(df.sorted[, 2]) == "numeric") &&
+        (mode(df.sorted[, 3]) == "numeric") &&
+        (mode(df.sorted[, 6]) == "numeric")) {
+      df.filtered <- rowfilter(df.sorted, input$dateRange)
+
+      if (input$disp == "group") {
+        data <- cbind(t(groupByMonthAndDetail1(df.filtered, FALSE)))
+        data <- data.frame(t(data[, order(data, decreasing = T)]))
+      } else {
+        data <- NULL
+      }
+    }
+  },
+  options = list(paging = FALSE)))
+
+  output$plot_g <- renderPlot({
+
+    req(input$file1)
+    df.sorted <- readAndSort(input$file1$datapath, input$order)
+
+    if ((mode(df.sorted[, 2]) == "numeric") &&
+        (mode(df.sorted[, 3]) == "numeric") &&
+        (mode(df.sorted[, 6]) == "numeric")) {
+      df.filtered <- rowfilter(df.sorted, input$dateRange)
+
+      if (input$disp == "group") {
+        data <- cbind(t(groupByMonthAndDetail1(df.filtered, FALSE)))
+        data <- data.frame(t(data[, order(data, decreasing = T)]))
+        windowsFonts(gothic=windowsFont("MS Gothic"))
+        par(family="gothic")
+        barplot(t(data)[,1], col=rainbow_hcl(ncol(data)), names.arg = names(t(data)))
+      }
+    }
+  })
 
 }
 
