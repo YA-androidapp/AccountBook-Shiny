@@ -19,11 +19,11 @@ reqPackage <- function(x)
   }
 }
 reqPackage('colorspace')
+reqPackage('plyr')
 reqPackage('dplyr')
 reqPackage('DT')
 reqPackage('ggplot2')
 reqPackage('lubridate')
-reqPackage('plyr')
 reqPackage('reshape2')
 reqPackage('shiny')
 reqPackage('xts')
@@ -96,7 +96,7 @@ rowfilter <- function(data.rowfilter, dateRange) {
     as.Date(data.rowfilter.char, format = checkDateFormat(data.rowfilter.char))
 
   cond <-
-    ((as.Date(data.rowfilter$取引日) >= dateRange[1]) &&
+    ((as.Date(data.rowfilter$取引日) >= dateRange[1]) &
        (as.Date(data.rowfilter$取引日) <= dateRange[2]))
   data.rowfilter <- data.rowfilter[cond, ]
   return(data.rowfilter)
@@ -135,12 +135,7 @@ groupByMonthAndDetail1_Day <- function(data.g, flag) {
   data.h <- data.h[, c(1, 2)]
   colnames(data.h) <- colsnames.gd
 
-  print('data.h')
-  print(data.h)
-
-  print('1')
   data.h.wide <- dcast(data.h,  詳細 ~ 日, length, value.var = '日')
-  print('2')
   data.h.wide.mean <- apply(data.h.wide[, -2], 2, length)
 
   if (flag) {
@@ -338,11 +333,10 @@ server <- function(input, output) {
         arrange(df.filtered.2$現在高) %>%
         filter(row_number() == 1)
 
-      print(df.filtered.2)
-
       df.xts <- xts(df.filtered.2, as.POSIXct(df.filtered.2$取引日))
 
-      windowsFonts(gothic = windowsFont('MS Gothic'))
+      if (.Platform$OS.type!="unix")
+        windowsFonts(gothic = windowsFont('MS Gothic'))
       par(family = 'gothic')
 
       g <- ggplot(df.xts,
@@ -375,7 +369,8 @@ server <- function(input, output) {
       if (input$disp == 'group_amount') {
         data <- cbind(t(groupByMonthAndDetail1_Amount(df.filtered, FALSE)))
         data <- data.frame(t(data[, order(data, decreasing = T)]))
-        windowsFonts(gothic = windowsFont('MS Gothic'))
+        if (.Platform$OS.type!="unix")
+          windowsFonts(gothic = windowsFont('MS Gothic'))
         par(family = 'gothic')
         barplot(t(data)[, 1],
                 col = rainbow_hcl(ncol(data)),
