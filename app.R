@@ -77,12 +77,11 @@ colsort <- function(data.colsort, order) {
 # 日付文字列の書式
 checkDateFormat <- function(dateStr) {
   fmt <- '%Y%m%d'
-  # if(nchar(dateStr)==6){
-  #   fmt <- '%Y%m%d'
-  # } else
-  if (grepl('/', dateStr) && nchar(dateStr) == 8) {
+  if(nchar(dateStr)==6){
+   fmt <- '%Y%m%d'
+  } else if (grepl('/', dateStr) && nchar(dateStr) == 8) {
     fmt <- '%Y/%m/%d'
-  } else if (grepl('年', dateStr) && nchar(dateStr) == 9) {
+  } else if (grepl('年', dateStr) && nchar(dateStr) == 11) {
     fmt <- '%Y年%m月%d日'
   }
   return(fmt)
@@ -102,6 +101,8 @@ rowfilter <- function(data.rowfilter, dateRange) {
   return(data.rowfilter)
 }
 
+roundmean <- function(x) {return (round(mean(x)))}
+
 #月別詳細1別に集計
 groupByMonthAndDetail1_Amount <- function(data.g, flag) {
   data.h <- data.g
@@ -112,13 +113,17 @@ groupByMonthAndDetail1_Amount <- function(data.g, flag) {
   colnames(data.h) <- colsnames.ga
 
   data.h.wide <- dcast(data.h,  取引年月  ~  詳細, sum, value.var = '入出金額')
-  data.h.wide.mean <- apply(data.h.wide[, -1], 2, mean)
+  data.h.wide.mean <- apply(data.h.wide[, -1], 2, roundmean)
 
   if (flag) {
     data.h.wide.order <-
       1 + c(0, order(data.h.wide.mean, decreasing = T))
     return(data.h.wide[, data.h.wide.order])
   } else {
+    data.h.wide.mean.names <- names(data.h.wide.mean)
+    data.h.wide.mean <- c(sum(data.h.wide.mean), data.h.wide.mean)
+    names(data.h.wide.mean) <- c('和', data.h.wide.mean.names)
+    
     return(data.h.wide.mean)
   }
 }
@@ -169,20 +174,23 @@ readAndSort <- function(fpath) {
       i <- i + 1
     }
     close(f)
+    
+    fpath
 
-    df.csv <- read.csv(
+    df.csv <<- read.csv(
       fpath,
-      #
       header = T,
       na.strings = '',
       skip = s,
       stringsAsFactors = F,
-      fileEncoding = 'cp932'
-      #fileEncoding = 'utf8'
+      fileEncoding = ifelse(startsWith(fpath, 'YenFutsuRireki_'),'utf8','cp932')
     )
-
+    
     fo <- c()
-    if (colnames(df.csv)[3] == '受入金額.円.') {
+    if (colnames(df.csv)[4] == 'お預け入れ額') {
+      fo <- c(1, 4, 5, 2, 3, 6)
+      df.csv[is.na(df.csv)] <- 0
+    } else if (colnames(df.csv)[3] == '受入金額.円.') {
       fo <- c(1, 3, 4, 5, 6, 7)
     }
 
@@ -247,13 +255,13 @@ ui <- fluidPage(# App title ----
 
                     plotOutput(
                       outputId = 'plot_d',
-                      width = '400px',
+                      width = '800px',
                       height = '400px'
                     ),
 
                     plotOutput(
                       outputId = 'plot_g',
-                      width = '400px',
+                      width = '800px',
                       height = '400px'
                     )
                   )
@@ -305,11 +313,9 @@ server <- function(input, output) {
       if (input$disp == 'group_day') {
         data <- cbind(t(groupByMonthAndDetail1_Day(df.filtered, FALSE)))
         data <- data.frame(t(data[, order(data, decreasing = T)]))
-        print(data)
       } else if (input$disp == 'group_amount') {
         data <- cbind(t(groupByMonthAndDetail1_Amount(df.filtered, FALSE)))
         data <- data.frame(t(data[, order(data, decreasing = T)]))
-        print(data)
       } else {
         data <- NULL
       }
