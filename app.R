@@ -108,7 +108,7 @@ groupByMonthAndDetail1_Amount <- function(data.g, flag) {
   data.h <- data.g
   data.h[, 1] <- substr(data.h[, 1], 1, 7)
   data.h[, 2] <- ifelse(data.h[, 2] > 0, data.h[, 2], -1 * data.h[, 3])
-  data.h[, 3] <- data.h[, 4]
+  data.h[, 3] <- ifelse(data.h[, 4]=='自払', paste(data.h[, 4],data.h[, 5],sep=' '), data.h[, 4])
   data.h <- data.h[, c(1, 2, 3)]
   colnames(data.h) <- colsnames.ga
 
@@ -123,7 +123,7 @@ groupByMonthAndDetail1_Amount <- function(data.g, flag) {
     data.h.wide.mean.names <- names(data.h.wide.mean)
     data.h.wide.mean <- c(sum(data.h.wide.mean), data.h.wide.mean)
     names(data.h.wide.mean) <- c('和', data.h.wide.mean.names)
-    
+
     return(data.h.wide.mean)
   }
 }
@@ -136,7 +136,7 @@ statmode <- function(x) {
 groupByMonthAndDetail1_Day <- function(data.g, flag) {
   data.h <- data.g
   data.h[, 1] <- as.integer(substr(data.g[, 1], 9, 10))
-  data.h[, 2] <- data.h[, 4]
+  data.h[, 2] <- ifelse(data.h[, 4]=='自払', paste(data.h[, 4],data.h[, 5],sep=' '), data.h[, 4])
   data.h <- data.h[, c(1, 2)]
   colnames(data.h) <- colsnames.gd
 
@@ -174,7 +174,7 @@ readAndSort <- function(fpath) {
       i <- i + 1
     }
     close(f)
-    
+
     fpath
 
     df.csv <<- read.csv(
@@ -185,7 +185,7 @@ readAndSort <- function(fpath) {
       stringsAsFactors = F,
       fileEncoding = ifelse(startsWith(fpath, 'YenFutsuRireki_'),'utf8','cp932')
     )
-    
+
     fo <- c()
     if (colnames(df.csv)[4] == 'お預け入れ額') {
       fo <- c(1, 4, 5, 2, 3, 6)
@@ -338,15 +338,16 @@ server <- function(input, output) {
         df.filtered.2 %>% group_by(df.filtered.2$取引日) %>%
         arrange(df.filtered.2$現在高) %>%
         filter(row_number() == 1)
-
-      df.xts <- xts(df.filtered.2, as.POSIXct(df.filtered.2$取引日))
+      df.xts <<- xts(df.filtered.2[,c('現在高')], as.POSIXct(df.filtered.2$取引日))
+      storage.mode(df.xts$現在高) <- "numeric"
+      df.xts$現在高 <- as.numeric(df.xts$現在高)
 
       if (.Platform$OS.type!="unix")
         windowsFonts(gothic = windowsFont('MS Gothic'))
       par(family = 'gothic')
 
       g <- ggplot(df.xts,
-                  aes(x =   取引日,
+                  aes(x =   Index,
                       y =   現在高,
                       group = 1))
       g <- g + geom_line(colour = 'red',
